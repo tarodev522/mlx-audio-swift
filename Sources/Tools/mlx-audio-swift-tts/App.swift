@@ -43,6 +43,7 @@ enum App {
     static func main() async {
         do {
             let args = try CLI.parse()
+            IrodoriTTSModel.seedOverride = args.seed   // 実験用: seed ガチャ
             try await run(
                 model: args.model,
                 text: args.text,
@@ -430,6 +431,7 @@ struct CLI {
     let benchmark: Bool
     let rawIPA: Bool
     let language: String?
+    let seed: Int?
 
     static func parse() throws -> CLI {
         var text: String?
@@ -445,6 +447,7 @@ struct CLI {
         var benchmark = false
         var rawIPA = false
         var language: String? = nil
+        var seed: Int? = nil
 
         var it = CommandLine.arguments.dropFirst().makeIterator()
         while let arg = it.next() {
@@ -488,6 +491,10 @@ struct CLI {
             case "--language", "-l":
                 guard let v = it.next() else { throw CLIError.missingValue(arg) }
                 language = v
+            case "--seed":
+                guard let v = it.next() else { throw CLIError.missingValue(arg) }
+                guard let value = Int(v) else { throw CLIError.invalidValue(arg, v) }
+                seed = value
             case "--help", "-h":
                 printUsage()
                 exit(0)
@@ -517,7 +524,8 @@ struct CLI {
             timestamps: timestamps,
             benchmark: benchmark,
             rawIPA: rawIPA,
-            language: language
+            language: language,
+            seed: seed
         )
     }
 

@@ -361,6 +361,9 @@ public final class IrodoriTTSModel: Module, @unchecked Sendable {
 // MARK: - SpeechGenerationModel conformance
 
 extension IrodoriTTSModel: SpeechGenerationModel {
+    /// 実験用: nil 以外なら generate/generateStream の rngSeed に使う(seed ガチャ検証)。
+    nonisolated(unsafe) public static var seedOverride: Int? = nil
+
     public func generate(
         text: String,
         voice: String?,
@@ -374,7 +377,7 @@ extension IrodoriTTSModel: SpeechGenerationModel {
         // `voice` carries the VoiceDesign caption.
         return try generateWaveform(
             text: text, caption: voice, refAudio: refAudio,
-            rngSeed: 0, secondsOverride: nil)
+            rngSeed: Self.seedOverride ?? 0, secondsOverride: nil)
     }
 
     public func generateStream(
@@ -394,7 +397,7 @@ extension IrodoriTTSModel: SpeechGenerationModel {
             do {
                 let started = CFAbsoluteTimeGetCurrent()
                 let waveform = try self.generateWaveform(
-                    text: text, caption: voice, refAudio: refAudio, rngSeed: 0, secondsOverride: nil)
+                    text: text, caption: voice, refAudio: refAudio, rngSeed: Self.seedOverride ?? 0, secondsOverride: nil)
                 let elapsed = max(CFAbsoluteTimeGetCurrent() - started, 1e-6)
                 let info = AudioGenerationInfo(
                     promptTokenCount: 0,
