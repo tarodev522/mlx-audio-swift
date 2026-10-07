@@ -333,7 +333,23 @@ public final class IrodoriTTSModel: Module, @unchecked Sendable {
 
         // Tokenizer (separate repo — not bundled with the model).
         let tokRepo = config.dit.textTokenizerRepo
-        if let tokRepoID = Repo.ID(rawValue: tokRepo) {
+        // Prefer a tokenizer bundled next to the model (`<modelDir>/tokenizer/`), so apps that
+        // manage their own model files don't trigger a Hub download (which also pulls the
+        // tokenizer repo's unused model weights). The files are sanitized in place, so pass a
+        // writable copy.
+        let localTokDir = modelDir.appendingPathComponent("tokenizer")
+        if FileManager.default.fileExists(atPath: localTokDir.appendingPathComponent("tokenizer.json").path) {
+            irodoriSanitizeTokenizerFiles(in: localTokDir)
+            model.tokenizer = try await AutoTokenizer.from(modelFolder: localTokDir)
+            let capRepo = config.dit.captionTokenizerRepoResolved
+            if capRepo == tokRepo {
+                model.captionTokenizer = model.tokenizer
+            } else if let capRepoID = Repo.ID(rawValue: capRepo) {
+                let capDir = try await ModelUtils.resolveOrDownloadModel(
+                    repoID: capRepoID, requiredExtension: ".json", cache: cache)
+                model.captionTokenizer = try await AutoTokenizer.from(modelFolder: capDir)
+            }
+        } else if let tokRepoID = Repo.ID(rawValue: tokRepo) {
             let tokDir = try await ModelUtils.resolveOrDownloadModel(
                 repoID: tokRepoID, requiredExtension: ".json", cache: cache)
             // swift-transformers' tokenizer loader crashes on llm-jp's config; strip the
