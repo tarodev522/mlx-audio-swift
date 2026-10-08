@@ -172,7 +172,7 @@ public final class IrodoriTTSModel: Module, @unchecked Sendable {
             hasCaption: MLXArray([hasCaption]))
 
         let predFrames = expm1(predLog[0]).item(Float.self)
-        let scaled = predFrames * config.sampler.durationScale
+        let scaled = predFrames * (Self.durationScaleOverride ?? config.sampler.durationScale)
         let minFrames = max(1, Int(ceil(Double(config.sampler.minSeconds * dsr))))
         let maxFrames = max(1, Int(floor(Double(config.sampler.maxSeconds * dsr))))
         return max(minFrames, min(maxFrames, Int((scaled).rounded())))
@@ -225,7 +225,7 @@ public final class IrodoriTTSModel: Module, @unchecked Sendable {
 
         var params = IrodoriSamplerParams()
         let s = config.sampler
-        params.numSteps = s.numSteps
+        params.numSteps = Self.numStepsOverride ?? s.numSteps
         params.cfgScaleText = s.cfgScaleText
         params.cfgScaleSpeaker = s.cfgScaleSpeaker
         params.cfgScaleCaption = s.cfgScaleCaption
@@ -379,6 +379,10 @@ public final class IrodoriTTSModel: Module, @unchecked Sendable {
 extension IrodoriTTSModel: SpeechGenerationModel {
     /// 実験用: nil 以外なら generate/generateStream の rngSeed に使う(seed ガチャ検証)。
     nonisolated(unsafe) public static var seedOverride: Int? = nil
+    /// nil 以外なら config の sampler.num_steps の代わりに使う(生成のたびに変えられるように。モデルの読み直し不要)。
+    nonisolated(unsafe) public static var numStepsOverride: Int? = nil
+    /// nil 以外なら config の sampler.duration_scale の代わりに使う(大きい=長く・遅く。話速 speed なら 1 / speed)。
+    nonisolated(unsafe) public static var durationScaleOverride: Float? = nil
 
     public func generate(
         text: String,
